@@ -240,7 +240,6 @@ int ler_evento(){
                         pos = strlen(buff);
 
                         while(1){
-                            printf("travou\n");
                             strcpy(auxiliar->texto, buff);
                             atualizar_tela();
                             outtextxy(auxiliar->x, auxiliar->y, buff);
