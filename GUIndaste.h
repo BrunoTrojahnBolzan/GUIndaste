@@ -120,6 +120,19 @@ JANELA criar_janela(int tipo, char *texto, int x, int y, int largura, int altura
             lista_janelas = nova;
         }
 
+        if(tipo == 1){
+            setbkcolor(LIGHTGRAY);
+            setcolor(BLACK);
+        }
+
+        settextstyle(3, 0, nova->tamanho_fonte);
+        outtextxy(nova->x, nova->y, nova->texto);
+
+        if(tipo == 1){
+            setbkcolor(cor_de_fundo);
+            setcolor(WHITE);
+        }
+
         return nova;
 
     }else
@@ -131,6 +144,13 @@ JANELA criar_janela(int tipo, char *texto, int x, int y, int largura, int altura
 void destruir_janela(JANELA janela){
 
     if(lista_janelas){
+
+        setcolor(cor_de_fundo);
+        settextstyle(3, 0, janela->tamanho_fonte);
+        outtextxy(janela->x, janela->y, janela->texto);
+
+        setcolor(WHITE);
+
         if(lista_janelas != lista_janelas->ant){
             JANELA auxiliar = lista_janelas;
 
@@ -162,34 +182,6 @@ void destruir_janela(JANELA janela){
 }
 
 void atualizar_tela(){
-
-    cleardevice();
-
-    JANELA auxiliar = lista_janelas;
-
-    do{
-        switch(auxiliar->tipo){
-        case 0:
-            settextstyle(3, 0, auxiliar->tamanho_fonte);
-            outtextxy(auxiliar->x, auxiliar->y, auxiliar->texto);
-            break;
-        case 1:
-            settextstyle(3, 0, auxiliar->tamanho_fonte);
-            setbkcolor(DARKGRAY);
-            outtextxy(auxiliar->x, auxiliar->y, auxiliar->texto);
-            setbkcolor(cor_de_fundo);
-            break;
-        case 2:
-            settextstyle(3, 0, auxiliar->tamanho_fonte);
-            outtextxy(auxiliar->x, auxiliar->y, auxiliar->texto);
-            break;
-        default:
-            break;
-        }
-
-        auxiliar = auxiliar->prox;
-
-    }while(auxiliar != lista_janelas);
 
     if(barra.existencia == 1){
 
@@ -240,9 +232,13 @@ int ler_evento(){
                         pos = strlen(buff);
 
                         while(1){
+                            setcolor(cor_de_fundo);
+                            outtextxy(auxiliar->x, auxiliar->y, auxiliar->texto);
                             strcpy(auxiliar->texto, buff);
-                            atualizar_tela();
+
+                            setcolor(WHITE);
                             outtextxy(auxiliar->x, auxiliar->y, buff);
+
                             buff[pos] = getch();
                             if(buff[pos] == '\b'){
                                 if(pos != 0){
@@ -324,11 +320,24 @@ void modificar_janela_x(JANELA janela, int x){
 
     JANELA auxiliar = lista_janelas;
 
+    setcolor(cor_de_fundo);
+    settextstyle(3, 0, janela->tamanho_fonte);
+    outtextxy(janela->x, janela->y, janela->texto);
+
     while(lista_janelas != auxiliar && auxiliar != janela)
         auxiliar = auxiliar->prox;
 
     if(auxiliar == janela)
         janela->x = x;
+
+    if(janela->tipo != 1)
+        setcolor(WHITE);
+    else{
+        setcolor(BLACK);
+        setbkcolor(LIGHTGRAY);
+    }
+    settextstyle(3, 0, janela->tamanho_fonte);
+    outtextxy(janela->x, janela->y, janela->texto);
 
 }
 
@@ -336,11 +345,29 @@ void modificar_janela_y(JANELA janela, int y){
 
     JANELA auxiliar = lista_janelas;
 
+    setcolor(cor_de_fundo);
+    settextstyle(3, 0, janela->tamanho_fonte);
+    outtextxy(janela->x, janela->y, janela->texto);
+
     while(lista_janelas != auxiliar && auxiliar != janela)
         auxiliar = auxiliar->prox;
 
     if(auxiliar == janela)
         janela->y = y;
+
+    if(janela->tipo != 1)
+        setcolor(WHITE);
+    else{
+        setcolor(BLACK);
+        setbkcolor(LIGHTGRAY);
+    }
+    settextstyle(3, 0, janela->tamanho_fonte);
+    outtextxy(janela->x, janela->y, janela->texto);
+
+    if(janela->tipo == 1){
+        setcolor(WHITE);
+        setbkcolor(cor_de_fundo);
+    }
 
 }
 
