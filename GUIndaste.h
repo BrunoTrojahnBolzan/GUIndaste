@@ -1,404 +1,167 @@
-#include <graphics.h>
-#include <conio.h>
-#include <stdio.h>
+/***********************
+GUIndaste.h
+Autor: Bruno Trojahn Bolzan
+Colaboradores: ----
+Descrição: Esta é uma biblioteca que oferece funções para a criação de programas com uma interface gráfica rudimentar.
+************************/
 
-//Tipos de janela
-#define JANELA_TEXTO 0
-#define JANELA_BOTAO 1
-#define JANELA_ENTRADA 2
 
-//Eventos (Equivalente a mensagens na Win32 API)
-#define BOTAO_PRESSIONADO 0
-#define DESLOCA_ABAIXO 1
-#define DESLOCA_ACIMA 2
 
-//Flags em geral
-#define SAIR 0
-#define SEM_BARRA_ROLAGEM 0
-#define BARRA_ROLAGEM 1
 
-//Definições internas
-#define ALOCAR_JANELA (JANELA) malloc(sizeof(struct janela))
+///Inclusão de bibliotecas
+#include "BaseWindows.h" //Inclusão da biblioteca base para Windows, inclua a equivalente em Linux se necessário
 
-typedef struct janela{
 
-    struct janela *id;
-    int tipo;
-    char texto[2000];
-    int x;
-    int y;
-    int largura;
-    int altura;
-    int tamanho_fonte;
-    int comando;
-    struct janela *ant;
-    struct janela *prox;
 
-}*JANELA;
 
-struct barra_rolagem{
+///Definições de tipo
 
-    int tamanho_tambor;
-    int posicao;
-    int existencia;
-    int x;
-    int y;
-    int altura;
-    int largura;
 
-};
 
-JANELA lista_janelas = NULL;
 
-void (*callback_func)(int, int);
+///Macros
+#define cor_rgb(r,g,b) ((unsigned int)((unsigned char)(r)|((unsigned char)(g) << 8)|((unsigned char)(b) << 16))) //Macro para criar um inteiro baseado no padrão RGB
+#define SEM_ROLAGEM_VERTICAL 0 //Flag para janela sem barra de rolagem vertical
+#define SEM_ROLAGEM_HORIZONTAL 0 //Flag para janela sem barra de rolagem horizontal
+#define ROLAGEM_VERTICAL 1 //Flag para janela com barra de rolagem vertical
+#define ROLAGEM_HORIZONTAL 1 //Flag para janela com barra de rolagem horizontal
+#define JANELA_TEXTO 0 //Macro para janela de texto estático
+#define JANELA_BOTAO 1 //Macro para janela botão
+#define JANELA_ENTRADA 2 //Macro para janela de texto editável
+#define BOTAO_PRESSIONADO 0 //Macro para evento de botão pressionado
+#define ROLAGEM_ABAIXO_VERTICAL 1 //Macro para evento de rolagem abaixo vertical
+#define ROLAGEM_ACIMA_VERTICAL 2 //Macro para evento de rolagem acima vertical
+#define ROLAGEM_ARRASTADA_VERTICAL 3 //Macro para evento de rolagem arrastada vertical
+#define ROLAGEM_ABAIXO_HORIZONTAL 4 //Macro para evento de rolagem abaixo horizontal
+#define ROLAGEM_ACIMA_HORIZONTAL 5 //Macro para evento de rolagem acima horizontal
+#define ROLAGEM_ARRASTADA_HORIZONTAL 6 //Macro para evento de rolagem arrastada horizontal
 
-int flag = -1;
 
-struct barra_rolagem barra = {0, 0, 0};
 
-int cor_de_fundo = 0;
 
-HWND esta_janela;
+///Protótipos de funções
+int main_GUIndaste(); //Protótipo da função principal do usuário
+int iniciar_janela(wchar_t *titulo, int x, int y, int largura, int altura, unsigned int cor, void (*callback)(int evento, int parametro), int rolagem_vertical, int rolagem_horizontal); //Protótipo da função criadora de uma janela principal
+void sair(); //Protótipo da função para sair do programa
+JANELA criar_janela(int tipo, wchar_t *texto, int x, int y, int largura, int altura, int comando, unsigned int cor); //Protótipo da função que cria janelas
+int obter_texto_janela(wchar_t *destino, JANELA janela); //Protótipo da função que obtém o texto de uma janela
+int obter_janela_x(JANELA janela); //Protótipo da função que retorna a posição horizontal de uma janela
+int obter_janela_y(JANELA janela); //Protótipo da função que retorna a posição vertical de uma janela
+int modificar_janela_xy(JANELA janela, int x, int y); //Protótipo da função que modifica a posição de uma janela
+int destruir_janela(JANELA janela); //Protótipo da função que destroi uma janela
 
-void iniciar_janela(int largura, int altura, char *titulo, int cor, void (*_callback_func)(int, int), int barra_rolagem){
 
-    initwindow(largura, altura, titulo);
-    esta_janela = GetForegroundWindow();
-    setbkcolor(cor);
-    cor_de_fundo = cor;
-    cleardevice();
 
-    if(barra_rolagem == 1){
 
-        barra.existencia = 1;
-        barra.x = largura - 20;
-        barra.y = 26;
-        barra.largura = 20;
-        barra.altura = altura;
+///Variáveis globais
 
-        setfillstyle(1, LIGHTGRAY);
-        bar(barra.x, 0, barra.x + barra.largura, barra.altura);
-        setfillstyle(1, BLACK);
-        bar(barra.x, 0, barra.x + barra.largura, 20);
-        bar(barra.x, barra.altura - 20, barra.x + barra.largura, barra.altura);
 
-        setfillstyle(1, WHITE);
-        bar(barra.x, barra.posicao, barra.x + barra.largura, barra.posicao + barra.tamanho_tambor);
 
-    }
 
-    callback_func = (*_callback_func);
+///Função principal da GUIndaste
+int main_biblioteca(){
 
+    int retorno = main_GUIndaste(); //Chama a função do usuário e armazena o retorno
+
+    return retorno; //Retorna o valor que o usuário desejar
 }
 
-JANELA criar_janela(int tipo, char *texto, int x, int y, int largura, int altura, int tamanho_letra, int comando){
 
-    if(tipo >=0 && tipo < 3){
 
-        JANELA nova = ALOCAR_JANELA;
 
-        if(nova == NULL) //Se a alocação falhar, retorna um valor inválido
-            return (JANELA) -2;
-        nova->id = nova;
-        nova->tipo = tipo;
-        strcpy(nova->texto, texto);
-        nova->x = x;
-        nova->y = y;
-        nova->largura = largura;
-        nova->altura = altura;
-        nova->tamanho_fonte = tamanho_letra;
-        nova->comando = comando;
+//Função para iniciar janela
+int iniciar_janela(wchar_t *titulo, int x, int y, int largura, int altura, unsigned int cor, void (*callback)(int evento, int parametro), int rolagem_vertical, int rolagem_horizontal){
 
-        if(lista_janelas){
-            lista_janelas->ant->prox = nova;
-            nova->ant = lista_janelas->ant;
-            nova->prox = lista_janelas;
-            lista_janelas->ant = nova;
-        }else{
-            nova->ant = nova;
-            nova->prox = nova;
-            lista_janelas = nova;
-        }
+    callback_function = callback; //Guarda o ponteiro para a função gestora de eventos do usuário da biblioteca
 
-        if(tipo == 1){
-            setbkcolor(LIGHTGRAY);
-            setcolor(BLACK);
-        }
+    //Chama a função interna equivalente e retorna -1 caso ela falhe
+    if(_iniciar_janela(titulo, x, y, largura, altura, cor, callback, rolagem_vertical, rolagem_horizontal))
+        return -1;
 
-        settextstyle(3, 0, nova->tamanho_fonte);
-        outtextxy(nova->x, nova->y, nova->texto);
-
-        if(tipo == 1){
-            setbkcolor(cor_de_fundo);
-            setcolor(WHITE);
-        }
-
-        return nova;
-
-    }else
-        return (JANELA) -1;
-    return (JANELA) 0;
-
+    return 0; //Retorna 0 se a janela for iniciada
 }
 
-void destruir_janela(JANELA janela){
-
-    if(lista_janelas){
-
-        setcolor(cor_de_fundo);
-        settextstyle(3, 0, janela->tamanho_fonte);
-        outtextxy(janela->x, janela->y, janela->texto);
-
-        setcolor(WHITE);
-
-        if(lista_janelas != lista_janelas->ant){
-            JANELA auxiliar = lista_janelas;
-
-            do{
-                auxiliar = auxiliar->prox;
-            }while(lista_janelas != auxiliar && auxiliar != janela);
-
-            if(auxiliar == janela){
-
-                auxiliar->prox->ant = auxiliar->ant;
-                auxiliar->ant->prox = auxiliar->prox;
-
-                if(lista_janelas == auxiliar)
-                    lista_janelas = lista_janelas->prox;
-
-                free(auxiliar);
-            }
 
 
-        }else{
-            if(janela == lista_janelas){
-                printf("%s\n", janela->texto);
-                free(janela);
-                lista_janelas = NULL;
-            }
-        }
-    }
 
+//Função que cria janela
+JANELA criar_janela(int tipo, wchar_t *texto, int x, int y, int largura, int altura, int comando, unsigned int cor){
+
+    //Chama a função interna de criar janela e armazena o retorno
+    JANELA retorno_janela = _criar_janela(tipo, texto, x, y, largura, altura, comando, cor);
+
+    return retorno_janela; //Retorna a janela criada
 }
 
-void atualizar_tela(){
 
-    if(barra.existencia == 1){
 
-        setfillstyle(1, LIGHTGRAY);
-        bar(barra.x, 0, barra.x + barra.largura, barra.altura);
-        setfillstyle(1, BLACK);
-        bar(barra.x, 0, barra.x + barra.largura, 20);
-        bar(barra.x, barra.altura - 20, barra.x + barra.largura, barra.altura);
 
-        setfillstyle(1, WHITE);
-        bar(barra.x, barra.posicao, barra.x + barra.largura, barra.posicao + barra.tamanho_tambor);
-    }
-}
-
+//Função que lê os eventos
 int ler_evento(){
 
-    if(flag != SAIR){
+    _ler_evento(); //Chama a função interna leitora de eventos
 
-        if(GetForegroundWindow() == esta_janela){ //Se o usuário está usando a janela do programa e não outra
-
-            //Lê a posição do mouse na tela
-            POINT mouse; //Estrutura que armazena as coordenadas do ponteiro do mouse
-            GetCursorPos(&mouse); //Lê as coordenadas do mouse na tela
-
-            ScreenToClient(esta_janela, &mouse); //Transforma as coordenadas do mouse em relação à tela
-                                                 //em coordenadas do mouse em relação ao topo da janela
-
-            if(lista_janelas){ //Se houver alguma janela criada
-
-                JANELA auxiliar = lista_janelas; //Variável auxiliar para percorrer a lista de janelas
-
-                do{
-                    //Administra botões
-                    if(auxiliar->tipo == JANELA_BOTAO && GetAsyncKeyState(VK_LBUTTON) && mouse.x > auxiliar->x && mouse.x < auxiliar->x + auxiliar->largura &&
-                       mouse.y > auxiliar->y && mouse.y < auxiliar->y + auxiliar->altura){
-
-                        (*callback_func)(BOTAO_PRESSIONADO, auxiliar->comando);
-                        break;
-
-                    }
-
-                    //Administra texto editável
-                    if(auxiliar->tipo == JANELA_ENTRADA && GetAsyncKeyState(VK_LBUTTON) && mouse.x > auxiliar->x && mouse.x < auxiliar->x + auxiliar->largura &&
-                       mouse.y > auxiliar->y && mouse.y < auxiliar->y + auxiliar->altura){
-                        char buff[2000] = {'\0'};
-                        int pos = 0;
-                        strcpy(buff, auxiliar->texto);
-                        pos = strlen(buff);
-
-                        while(1){
-                            setcolor(cor_de_fundo);
-                            outtextxy(auxiliar->x, auxiliar->y, auxiliar->texto);
-                            strcpy(auxiliar->texto, buff);
-
-                            setcolor(WHITE);
-                            outtextxy(auxiliar->x, auxiliar->y, buff);
-
-                            buff[pos] = getch();
-                            if(buff[pos] == '\b'){
-                                if(pos != 0){
-                                    buff[pos] = '\0';
-                                    pos--;
-                                    buff[pos] = '\0';
-                                }else
-                                    buff[pos] = '\0';
-                                continue;
-                            }
-                            pos++;
-                            if(buff[pos - 1] == '\r')
-                                break;
-                        }
-                        buff[pos] = '\0';
-                        buff[pos - 1] = '\0';
-                        strcpy(auxiliar->texto, buff);
-                        auxiliar->largura = strlen(buff) * 9;
-                        break;
-                    }
-
-                    auxiliar = auxiliar->prox;
-
-                }while(lista_janelas != auxiliar);
-            }
-
-            if(barra.existencia == 1){
-
-                if(mouse.x > barra.x && mouse.x < barra.x + barra.largura && mouse.y > 0 && mouse.y < 20 && GetAsyncKeyState(VK_LBUTTON)){
-                    (*callback_func)(DESLOCA_ACIMA, -1);
-                    delay(100);
-                }
-
-                if(mouse.x > barra.x && mouse.x < barra.x + barra.largura && mouse.y > barra.altura - 20 && mouse.y < barra.altura && GetAsyncKeyState(VK_LBUTTON)){
-                    (*callback_func)(DESLOCA_ABAIXO, -1);
-                    delay(100);
-                }
-            }
-        }
-
-    }else{
-        //futuramente aqui eu teria que desalocar a memória alocada em tempo de execução e etc
-        return SAIR;
-    }
-    return -1;
+    return flag_sair; //Retorna de acordo com a flag
 }
 
-void ler_texto_janela(JANELA janela, char *destino){
 
-    JANELA auxiliar = lista_janelas;
 
-    while(lista_janelas != auxiliar && auxiliar != janela)
-        auxiliar = auxiliar->prox;
 
-    if(auxiliar == janela)
-        snprintf(destino, strlen(janela->texto) + 2, "%s", janela->texto);
-}
+//Função que obtém o texto de uma determinada janela
+int obter_texto_janela(wchar_t *destino, JANELA janela){
 
-void modificar_barra_rolagem(int tamanho_tambor, int posicao){
-
-    barra.tamanho_tambor = tamanho_tambor;
-    barra.posicao = posicao;
+    return _obter_texto_janela(destino, janela);
 
 }
 
-int obter_tamanho_tambor_barra_rol(){
 
-    return barra.tamanho_tambor;
 
-}
 
-int obter_posicao_barra_rol(){
-
-    return barra.posicao;
-
-}
-
-void modificar_janela_x(JANELA janela, int x){
-
-    JANELA auxiliar = lista_janelas;
-
-    setcolor(cor_de_fundo);
-    settextstyle(3, 0, janela->tamanho_fonte);
-    outtextxy(janela->x, janela->y, janela->texto);
-
-    while(lista_janelas != auxiliar && auxiliar != janela)
-        auxiliar = auxiliar->prox;
-
-    if(auxiliar == janela)
-        janela->x = x;
-
-    if(janela->tipo != 1)
-        setcolor(WHITE);
-    else{
-        setcolor(BLACK);
-        setbkcolor(LIGHTGRAY);
-    }
-    settextstyle(3, 0, janela->tamanho_fonte);
-    outtextxy(janela->x, janela->y, janela->texto);
-
-}
-
-void modificar_janela_y(JANELA janela, int y){
-
-    JANELA auxiliar = lista_janelas;
-
-    setcolor(cor_de_fundo);
-    settextstyle(3, 0, janela->tamanho_fonte);
-    outtextxy(janela->x, janela->y, janela->texto);
-
-    while(lista_janelas != auxiliar && auxiliar != janela)
-        auxiliar = auxiliar->prox;
-
-    if(auxiliar == janela)
-        janela->y = y;
-
-    if(janela->tipo != 1)
-        setcolor(WHITE);
-    else{
-        setcolor(BLACK);
-        setbkcolor(LIGHTGRAY);
-    }
-    settextstyle(3, 0, janela->tamanho_fonte);
-    outtextxy(janela->x, janela->y, janela->texto);
-
-    if(janela->tipo == 1){
-        setcolor(WHITE);
-        setbkcolor(cor_de_fundo);
-    }
-
-}
-
+//Função que obtém a posição horizontal de uma janela
 int obter_janela_x(JANELA janela){
 
-    JANELA auxiliar = lista_janelas;
-
-    while(lista_janelas != auxiliar && auxiliar != janela)
-        auxiliar = auxiliar->prox;
-
-    if(auxiliar == janela)
-        return janela->x;
-
-    return 0;
+    return _obter_janela_x(janela);
 
 }
 
+
+
+
+//Função que obtém a posição horizontal de uma janela
 int obter_janela_y(JANELA janela){
 
-    JANELA auxiliar = lista_janelas;
-
-    while(lista_janelas != auxiliar && auxiliar != janela)
-        auxiliar = auxiliar->prox;
-
-    if(auxiliar == janela)
-        return janela->y;
-
-    return 0;
+    return _obter_janela_y(janela);
 
 }
 
+
+
+
+//Função que modifica a posição de uma janela
+int modificar_janela_xy(JANELA janela, int x, int y){
+
+    return _modificar_janela_xy(janela, x, y);
+
+}
+
+
+
+
+//Função que destroi uma janela
+int destruir_janela(JANELA janela){
+
+    return _destruir_janela(janela);
+
+}
+
+
+
+
+//Função que termina o programa
 void sair(){
-    flag = SAIR;
+
+    _sair(); //Chama a função interna de sair
+
+    flag_sair = 0; //Modifica a flag para término do programa
+
 }
