@@ -10,6 +10,7 @@ Descrição: Esta é a biblioteca base para Windows da biblioteca gráfica GUInd
 
 ///Inclusão de bibliotecas
 #include <windows.h> //Biblioteca do Windows
+#include <CommCtrl.h>
 #include <string.h> //Biblioteca para manipulação de strings
 #include <stdio.h> //Biblioteca para funções de formatação
 
@@ -21,13 +22,14 @@ Descrição: Esta é a biblioteca base para Windows da biblioteca gráfica GUInd
 #define JANELA_BOTAO 1 //Macro para janela botão
 #define JANELA_ENTRADA 2 //Macro para janela de texto editável
 #define JANELA_GENERICA 3 //Macro para janela genérica
-#define BOTAO_PRESSIONADO 1 //Macro para evento de botão pressionado
-#define ROLAGEM_ABAIXO_VERTICAL 2 //Macro para evento de rolagem abaixo vertical
-#define ROLAGEM_ACIMA_VERTICAL 3 //Macro para evento de rolagem acima vertical
-#define ROLAGEM_ARRASTADA_VERTICAL 4 //Macro para evento de rolagem arrastada vertical
-#define ROLAGEM_ABAIXO_HORIZONTAL 5 //Macro para evento de rolagem abaixo horizontal
-#define ROLAGEM_ACIMA_HORIZONTAL 6 //Macro para evento de rolagem acima horizontal
-#define ROLAGEM_ARRASTADA_HORIZONTAL 7 //Macro para evento de rolagem arrastada horizontal
+#define JANELA_BARRA_PROGRESSO 4 //Macro para barra de progresso
+#define EV_BOTAO_PRESSIONADO 1 //Macro para evento de botão pressionado
+#define EV_ROLAGEM_ABAIXO_VERTICAL 2 //Macro para evento de rolagem abaixo vertical
+#define EV_ROLAGEM_ACIMA_VERTICAL 3 //Macro para evento de rolagem acima vertical
+#define EV_ROLAGEM_ARRASTADA_VERTICAL 4 //Macro para evento de rolagem arrastada vertical
+#define EV_ROLAGEM_ABAIXO_HORIZONTAL 5 //Macro para evento de rolagem abaixo horizontal
+#define EV_ROLAGEM_ACIMA_HORIZONTAL 6 //Macro para evento de rolagem acima horizontal
+#define EV_ROLAGEM_ARRASTADA_HORIZONTAL 7 //Macro para evento de rolagem arrastada horizontal
 
 
 
@@ -53,6 +55,7 @@ typedef struct janela{
 
 }*JANELA;
 
+//Estrutura de evento
 typedef struct evento{
 
     JANELA janela;
@@ -75,8 +78,10 @@ int _obter_texto_janela(wchar_t *destino, JANELA janela); //Protótipo da funç�
 int _obter_janela_x(JANELA janela); //Protótipo da função interna que retorna a posição horizontal de uma janela
 int _obter_janela_y(JANELA janela); //Protótipo da função interna que retorna a posição vertical de uma janela
 int _modificar_janela_xy(JANELA janela, int x, int y); //Protótipo da função interna que modifica a posição de uma janela
-int _destruir_janela(JANELA janela); //Protótipo da função interna que destroi uma janela
+int _modificar_posicao_barra_progresso(JANELA janela, int nova_posicao); //Protótipo da função interna que modifica a posição de uma barra de progresso
+int _destruir_janela(JANELA janela); //Protótipo da função interna que destrói uma janela
 void _sair(); //Protótipo da função interna que sai do programa
+static JANELA procurar_janela(HWND hwnd); ////Protótipo da função que procura a janela associada a determinado HWND
 
 
 
@@ -123,7 +128,7 @@ LRESULT WINAPI WinProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp){
 
                     if(auxiliar->comando == wp){
                         _evento.janela = auxiliar;
-                        _evento.evento = BOTAO_PRESSIONADO;
+                        _evento.evento = EV_BOTAO_PRESSIONADO;
                         _evento.parametro1 = wp;
 
                         break;
@@ -141,18 +146,19 @@ LRESULT WINAPI WinProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp){
             switch(LOWORD(wp)){
 
                 case SB_LINEDOWN:
-                    _evento.janela = auxiliar;
-                    _evento.evento = ROLAGEM_ABAIXO_VERTICAL;
+
+                    _evento.janela = 0;
+                    _evento.evento = EV_ROLAGEM_ABAIXO_VERTICAL;
                     break;
 
                 case SB_LINEUP:
-                    _evento.janela = auxiliar;
-                    _evento.evento = ROLAGEM_ACIMA_VERTICAL;
+                    _evento.janela = 0;
+                    _evento.evento = EV_ROLAGEM_ACIMA_VERTICAL;
                     break;
 
                 case SB_THUMBTRACK:
-                    _evento.janela = auxiliar;
-                    _evento.evento = ROLAGEM_ARRASTADA_VERTICAL;
+                    _evento.janela = 0;
+                    _evento.evento = EV_ROLAGEM_ARRASTADA_VERTICAL;
                     break;
             }
             break;
@@ -161,18 +167,18 @@ LRESULT WINAPI WinProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp){
             switch(LOWORD(wp)){
 
                 case SB_LINELEFT:
-                    _evento.janela = auxiliar;
-                    _evento.evento = ROLAGEM_ABAIXO_HORIZONTAL;
+                    _evento.janela = 0;
+                    _evento.evento = EV_ROLAGEM_ABAIXO_HORIZONTAL;
                     break;
 
                 case SB_LINERIGHT:
-                    _evento.janela = auxiliar;
-                    _evento.evento = ROLAGEM_ACIMA_HORIZONTAL;
+                    _evento.janela = 0;
+                    _evento.evento = EV_ROLAGEM_ACIMA_HORIZONTAL;
                     break;
 
                 case SB_THUMBTRACK:
-                    _evento.janela = auxiliar;
-                    _evento.evento = ROLAGEM_ARRASTADA_HORIZONTAL;
+                    _evento.janela = 0;
+                    _evento.evento = EV_ROLAGEM_ARRASTADA_HORIZONTAL;
                     break;
             }
             break;
@@ -196,6 +202,26 @@ LRESULT WINAPI WinProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp){
             }while(lista_janelas != auxiliar);
 
             break;
+
+        case WM_CTLCOLOREDIT:
+
+            auxiliar = lista_janelas;
+
+            do{
+                if(auxiliar->tipo == JANELA_ENTRADA && auxiliar->pintada == 0){
+
+                    SetTextColor((HDC) wp, auxiliar->cor);
+                    auxiliar->pintada = 1;
+                    pincel = CreateSolidBrush(RGB(255, 255, 255));
+                    return (LRESULT) pincel;
+                }
+
+                auxiliar = auxiliar->prox;
+
+            }while(lista_janelas != auxiliar);
+
+            break;
+
         default:
             DefWindowProcW(hwnd, msg, wp, lp);
     }
@@ -235,7 +261,7 @@ LRESULT WINAPI WinProcFilho(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp){
 
                     if(auxiliar->comando == wp){
                         _evento.janela = auxiliar;
-                        _evento.evento = BOTAO_PRESSIONADO;
+                        _evento.evento = EV_BOTAO_PRESSIONADO;
                         _evento.parametro1 = wp;
 
                         break;
@@ -253,18 +279,18 @@ LRESULT WINAPI WinProcFilho(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp){
             switch(LOWORD(wp)){
 
                 case SB_LINEDOWN:
-                    _evento.janela = auxiliar;
-                    _evento.evento = ROLAGEM_ABAIXO_VERTICAL;
+                    _evento.janela = procurar_janela(hwnd);
+                    _evento.evento = EV_ROLAGEM_ABAIXO_VERTICAL;
                     break;
 
                 case SB_LINEUP:
-                    _evento.janela = auxiliar;
-                    _evento.evento = ROLAGEM_ACIMA_VERTICAL;
+                    _evento.janela = procurar_janela(hwnd);
+                    _evento.evento = EV_ROLAGEM_ACIMA_VERTICAL;
                     break;
 
                 case SB_THUMBTRACK:
-                    _evento.janela = auxiliar;
-                    _evento.evento = ROLAGEM_ARRASTADA_VERTICAL;
+                    _evento.janela = procurar_janela(hwnd);
+                    _evento.evento = EV_ROLAGEM_ARRASTADA_VERTICAL;
                     break;
             }
             break;
@@ -273,18 +299,18 @@ LRESULT WINAPI WinProcFilho(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp){
             switch(LOWORD(wp)){
 
                 case SB_LINELEFT:
-                    _evento.janela = auxiliar;
-                    _evento.evento = ROLAGEM_ABAIXO_HORIZONTAL;
+                    _evento.janela = procurar_janela(hwnd);
+                    _evento.evento = EV_ROLAGEM_ABAIXO_HORIZONTAL;
                     break;
 
                 case SB_LINERIGHT:
-                    _evento.janela = auxiliar;
-                    _evento.evento = ROLAGEM_ACIMA_HORIZONTAL;
+                    _evento.janela = procurar_janela(hwnd);
+                    _evento.evento = EV_ROLAGEM_ACIMA_HORIZONTAL;
                     break;
 
                 case SB_THUMBTRACK:
-                    _evento.janela = auxiliar;
-                    _evento.evento = ROLAGEM_ARRASTADA_HORIZONTAL;
+                    _evento.janela = procurar_janela(hwnd);
+                    _evento.evento = EV_ROLAGEM_ARRASTADA_HORIZONTAL;
                     break;
             }
             break;
@@ -295,6 +321,37 @@ LRESULT WINAPI WinProcFilho(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp){
 
             do{
                 if(auxiliar->tipo == 0 && auxiliar->pintada == 0){
+
+                    SetTextColor((HDC) wp, auxiliar->cor);
+
+                    auxiliar2 = lista_janelas;
+                    do{
+                        if(auxiliar->hWnd_pai == auxiliar2->hWnd){
+                            SetBkColor((HDC) wp, auxiliar2->cor);
+                            break;
+                        }
+
+                        auxiliar2 = auxiliar2->prox;
+
+                    }while(auxiliar2 != lista_janelas);
+
+                    auxiliar->pintada = 1;
+                    pincel = CreateSolidBrush(auxiliar2->cor);
+                    return (LRESULT) pincel;
+                }
+
+                auxiliar = auxiliar->prox;
+
+            }while(lista_janelas != auxiliar);
+
+            break;
+
+        case WM_CTLCOLOREDIT:
+
+            auxiliar = lista_janelas;
+
+            do{
+                if(auxiliar->tipo == JANELA_ENTRADA && auxiliar->pintada == 0){
 
                     SetTextColor((HDC) wp, auxiliar->cor);
 
@@ -332,9 +389,8 @@ int WINAPI WinMain(HINSTANCE hThisInstance, HINSTANCE hPrevInstance, LPSTR lpszA
 
     hInstance = hThisInstance; //Globaliza a instância para acesso pela função _iniciar_janela
 
-    int retorno = main_biblioteca(); //Chama a função principal da GUIndaste e armazena o retorno
+    return main_biblioteca(); //Chama a função principal da GUIndaste e retorna o valor que o usuário desejar
 
-    return retorno; //Retorna o valor que o usuário desejar
 }
 
 
@@ -433,13 +489,13 @@ void _sair(){
 
 JANELA _criar_janela(int tipo, wchar_t *texto, int x, int y, int largura, int altura, int comando, COLORREF cor, JANELA pai){
 
-    if(tipo >= 0 && tipo <= 3){
+    if(tipo >= 0 && tipo <= 4){
         JANELA nova = malloc(sizeof(struct janela));
 
         if(nova == NULL) //Se a alocação falhar, retorna um valor inválido
             return (JANELA) -2;
 
-        wchar_t tipo_janela[15] = {0};
+        wchar_t tipo_janela[50] = {0};
 
         DWORD estilo = WS_VISIBLE | WS_CHILD;
 
@@ -456,9 +512,11 @@ JANELA _criar_janela(int tipo, wchar_t *texto, int x, int y, int largura, int al
                     wcscpy(tipo_janela, L"edit");
                     estilo |= WS_BORDER | ES_AUTOVSCROLL | ES_AUTOHSCROLL | ES_MULTILINE | WS_VSCROLL;
                     break;
+                case 4:
+                    wcscpy(tipo_janela, PROGRESS_CLASSW);
+                    break;
             }
         }else{
-
             snwprintf(tipo_janela, 14, L"%ls", pai);
             WNDCLASSW janela_generica = {0};
             janela_generica.hbrBackground = CreateSolidBrush(cor);
@@ -468,7 +526,6 @@ JANELA _criar_janela(int tipo, wchar_t *texto, int x, int y, int largura, int al
             janela_generica.lpszClassName = tipo_janela;
 
             RegisterClassW(&janela_generica);
-
         }
 
         HWND hWnd_final = janela_hwnd;
@@ -496,7 +553,6 @@ JANELA _criar_janela(int tipo, wchar_t *texto, int x, int y, int largura, int al
         nova->pintada = 0;
         nova->hWnd_pai = hWnd_final;
         DeleteObject((HGDIOBJ) pincel);
-
         if(lista_janelas){
             lista_janelas->ant->prox = nova;
             nova->ant = lista_janelas->ant;
@@ -507,9 +563,7 @@ JANELA _criar_janela(int tipo, wchar_t *texto, int x, int y, int largura, int al
             nova->prox = nova;
             lista_janelas = nova;
         }
-
         return nova;
-
     }else
         return (JANELA) -1;
     return (JANELA) 0;
@@ -623,6 +677,30 @@ int _modificar_janela_xy(JANELA janela, int x, int y){
 
 
 
+int _modificar_posicao_barra_progresso(JANELA janela, int nova_posicao){
+
+    JANELA auxiliar = lista_janelas;
+
+    if(auxiliar){
+        do{
+            if(auxiliar == janela){
+                if(nova_posicao >= 0 && nova_posicao <= 100){
+                    SendMessageW(auxiliar->hWnd, PBM_SETPOS, nova_posicao, 0);
+                    return 0;
+                }
+                return -1;
+            }
+
+            auxiliar = auxiliar->prox;
+
+        }while(auxiliar != lista_janelas);
+    }
+    return -1;
+}
+
+
+
+
 int _destruir_janela(JANELA janela){
 
     if(janela){
@@ -665,4 +743,28 @@ int _destruir_janela(JANELA janela){
     }
 
     return 0;
+}
+
+
+
+
+//Função que busca a janela associada a determinado HWND
+static JANELA procurar_janela(HWND hwnd){
+
+    JANELA auxiliar = lista_janelas;
+
+    if(auxiliar){
+
+        do{
+            if(auxiliar->hWnd == hwnd)
+                return auxiliar;
+
+            auxiliar = auxiliar->prox;
+
+        }while(auxiliar != lista_janelas);
+
+    }
+
+    return (JANELA) -2;
+
 }
