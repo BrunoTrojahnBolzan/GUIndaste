@@ -29,13 +29,14 @@ Descrição: Esta é uma biblioteca que oferece funções para a criação de pr
 #define JANELA_BOTAO 1 //Macro para janela botão
 #define JANELA_ENTRADA 2 //Macro para janela de texto editável
 #define JANELA_GENERICA 3 //Macro para janela genérica
-#define BOTAO_PRESSIONADO 1 //Macro para evento de botão pressionado
-#define ROLAGEM_ABAIXO_VERTICAL 2 //Macro para evento de rolagem abaixo vertical
-#define ROLAGEM_ACIMA_VERTICAL 3 //Macro para evento de rolagem acima vertical
-#define ROLAGEM_ARRASTADA_VERTICAL 4 //Macro para evento de rolagem arrastada vertical
-#define ROLAGEM_ABAIXO_HORIZONTAL 5 //Macro para evento de rolagem abaixo horizontal
-#define ROLAGEM_ACIMA_HORIZONTAL 6 //Macro para evento de rolagem acima horizontal
-#define ROLAGEM_ARRASTADA_HORIZONTAL 7 //Macro para evento de rolagem arrastada horizontal
+#define JANELA_BARRA_PROGRESSO 4 //Macro para barra de progresso
+#define EV_BOTAO_PRESSIONADO 1 //Macro para evento de botão pressionado
+#define EV_ROLAGEM_ABAIXO_VERTICAL 2 //Macro para evento de rolagem abaixo vertical
+#define EV_ROLAGEM_ACIMA_VERTICAL 3 //Macro para evento de rolagem acima vertical
+#define EV_ROLAGEM_ARRASTADA_VERTICAL 4 //Macro para evento de rolagem arrastada vertical
+#define EV_ROLAGEM_ABAIXO_HORIZONTAL 5 //Macro para evento de rolagem abaixo horizontal
+#define EV_ROLAGEM_ACIMA_HORIZONTAL 6 //Macro para evento de rolagem acima horizontal
+#define EV_ROLAGEM_ARRASTADA_HORIZONTAL 7 //Macro para evento de rolagem arrastada horizontal
 
 
 
@@ -49,7 +50,8 @@ int obter_texto_janela(wchar_t *destino, JANELA janela); //Protótipo da funçã
 int obter_janela_x(JANELA janela); //Protótipo da função que retorna a posição horizontal de uma janela
 int obter_janela_y(JANELA janela); //Protótipo da função que retorna a posição vertical de uma janela
 int modificar_janela_xy(JANELA janela, int x, int y); //Protótipo da função que modifica a posição de uma janela
-int destruir_janela(JANELA janela); //Protótipo da função que destroi uma janela
+int destruir_janela(JANELA janela); //Protótipo da função que destrói uma janela
+int modificar_posicao_barra_progresso(JANELA janela, int nova_posicao); //Protótipo da função que modifica a posição de uma barra de progresso
 
 
 
@@ -62,9 +64,8 @@ int destruir_janela(JANELA janela); //Protótipo da função que destroi uma jan
 ///Função principal da GUIndaste
 int main_biblioteca(){
 
-    int retorno = main_GUIndaste(); //Chama a função do usuário e armazena o retorno
+    return main_GUIndaste(); //Chama a função do usuário e retorna o valor que o usuário desejar
 
-    return retorno; //Retorna o valor que o usuário desejar
 }
 
 
@@ -139,6 +140,15 @@ int obter_janela_y(JANELA janela){
 int modificar_janela_xy(JANELA janela, int x, int y){
 
     return _modificar_janela_xy(janela, x, y);
+
+}
+
+
+
+
+int modificar_posicao_barra_progresso(JANELA janela, int nova_posicao){
+
+    return _modificar_posicao_barra_progresso(janela, nova_posicao);
 
 }
 
