@@ -65,10 +65,11 @@ Descrição: Esta é uma biblioteca que oferece funções para a criação de pr
 int main_GUIndaste(); //Protótipo da função principal do usuário
 int iniciar_janela(wchar_t *titulo, int x, int y, int largura, int altura, unsigned int cor, unsigned long int opcoes); //Protótipo da função criadora de uma janela principal
 void sair(); //Protótipo da função para sair do programa
-JANELA criar_janela(int tipo, wchar_t *texto, int x, int y, int largura, int altura, int comando, unsigned int cor, unsigned int cor_de_fundo, JANELA pai, unsigned long int opcoes); //Protótipo da função que cria janelas
+JANELA criar_janela(int tipo, wchar_t *texto, int x, int y, int largura, int altura, ACAO acao, void *dados, unsigned int cor, unsigned int cor_de_fundo, JANELA pai, unsigned long int opcoes); //Protótipo da função que cria janelas
 int obter_texto_janela(wchar_t *destino, JANELA janela); //Protótipo da função que obtém o texto de uma janela
 int obter_janela_x(JANELA janela); //Protótipo da função que retorna a posição horizontal de uma janela
 int obter_janela_y(JANELA janela); //Protótipo da função que retorna a posição vertical de uma janela
+int modificar_texto_janela(JANELA janela, wchar_t *texto); //Protótipo da função que modifica o texto de uma janela
 int modificar_janela_xy(JANELA janela, int x, int y); //Protótipo da função que modifica a posição de uma janela
 int destruir_janela(JANELA janela); //Protótipo da função que destrói uma janela
 int modificar_posicao_barra_progresso(JANELA janela, int nova_posicao); //Protótipo da função que modifica a posição de uma barra de progresso
@@ -110,10 +111,10 @@ int iniciar_janela(wchar_t *titulo, int x, int y, int largura, int altura, unsig
 
 
 //Função que cria janela
-JANELA criar_janela(int tipo, wchar_t *texto, int x, int y, int largura, int altura, int comando, unsigned int cor, unsigned int cor_de_fundo, JANELA pai, unsigned long int opcoes){
+JANELA criar_janela(int tipo, wchar_t *texto, int x, int y, int largura, int altura, ACAO acao, void *dados, unsigned int cor, unsigned int cor_de_fundo, JANELA pai, unsigned long int opcoes){
 
     //Chama a função interna de criar janela e armazena o retorno
-    JANELA retorno_janela = _criar_janela(tipo, texto, x, y, largura, altura, comando, cor, cor_de_fundo, pai, opcoes);
+    JANELA retorno_janela = _criar_janela(tipo, texto, x, y, largura, altura, acao, dados, cor, cor_de_fundo, pai, opcoes);
 
     return retorno_janela; //Retorna a janela criada
 }
@@ -165,6 +166,16 @@ int obter_janela_y(JANELA janela){
 int modificar_janela_xy(JANELA janela, int x, int y){
 
     return _modificar_janela_xy(janela, x, y);
+
+}
+
+
+
+
+//Função que modifica o texto de uma janela
+int modificar_texto_janela(JANELA janela, wchar_t *texto){
+
+    return _modificar_texto_janela(janela, texto);
 
 }
 
