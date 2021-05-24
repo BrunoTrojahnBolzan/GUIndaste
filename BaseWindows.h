@@ -11,7 +11,7 @@ Descrição: Esta é a biblioteca base para Windows da biblioteca gráfica GUInd
 ///Inclusão de bibliotecas
 #include <windows.h> //Biblioteca do Windows
 #include <CommCtrl.h> //Biblioteca do Windows com definições para controles
-#include <string.h> //Biblioteca para manipulação de strings
+#include <wchar.h> //Biblioteca para manipulação de strings
 #include <stdio.h> //Biblioteca para funções de formatação
 
 
@@ -38,6 +38,9 @@ Descrição: Esta é a biblioteca base para Windows da biblioteca gráfica GUInd
 
 ///Definições de tipos
 
+//Função de botão
+typedef void(*ACAO)(void*);
+
 //Estrutura de janela
 typedef struct janela{
 
@@ -50,6 +53,8 @@ typedef struct janela{
     int largura;
     int altura;
     int comando;
+    ACAO acao;
+    void *dados;
     unsigned int cor;
     unsigned int cor_de_fundo;
     int pintada;
@@ -76,10 +81,11 @@ LRESULT WINAPI WinProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp); //Protótipo 
 int main_biblioteca(); //Protótipo da função principal da GUIndaste
 int _iniciar_janela(wchar_t *titulo, int x, int y, int largura, int altura, COLORREF cor, unsigned long int opcoes); //Protótipo da função interna inicializadora de janela
 EVENTO _ler_evento(); //Protótipo da função interna leitora de eventos
-JANELA _criar_janela(int tipo, wchar_t *texto, int x, int y, int largura, int altura, int comando, COLORREF cor, COLORREF cor_de_fundo, JANELA pai, unsigned long int opcoes); //Protótipo da função interna criadora de janelas
+JANELA _criar_janela(int tipo, wchar_t *texto, int x, int y, int largura, int altura, ACAO acao, void *dados, COLORREF cor, COLORREF cor_de_fundo, JANELA pai, unsigned long int opcoes); //Protótipo da função interna criadora de janelas
 int _obter_texto_janela(wchar_t *destino, JANELA janela); //Protótipo da função interna que obtém o texto de uma janela
 int _obter_janela_x(JANELA janela); //Protótipo da função interna que retorna a posição horizontal de uma janela
 int _obter_janela_y(JANELA janela); //Protótipo da função interna que retorna a posição vertical de uma janela
+int _modificar_texto_janela(JANELA janela, wchar_t *texto); //Protótipo da função interna que modifica o texto de uma janela
 int _modificar_janela_xy(JANELA janela, int x, int y); //Protótipo da função interna que modifica a posição de uma janela
 int _modificar_posicao_barra_progresso(JANELA janela, int nova_posicao); //Protótipo da função interna que modifica a posição de uma barra de progresso
 int _obter_posicao_barra_rol(JANELA janela, int opcao); //Protótipo da função interna que retorna a posição de uma barra de rolagem
@@ -90,6 +96,7 @@ int _caixa_dialogo(wchar_t *titulo, wchar_t *texto, unsigned int opcoes, JANELA 
 int _destruir_janela(JANELA janela); //Protótipo da função interna que destrói uma janela
 void _sair(); //Protótipo da função interna que sai do programa
 static JANELA procurar_janela(HWND hwnd); //Protótipo da função que procura a janela associada a determinado HWND
+static int buscar_comando(); //Protótipo da função que procura um número para comando disponível
 
 
 
@@ -134,12 +141,8 @@ LRESULT WINAPI WinProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp){
                 JANELA auxiliar = lista_janelas;
 
                 do{
-
-                    if(auxiliar->comando == wp){
-                        _evento.janela = auxiliar;
-                        _evento.evento = EV_BOTAO_PRESSIONADO;
-                        _evento.parametro1 = wp;
-
+                    if(auxiliar->tipo == JANELA_BOTAO && auxiliar->comando == wp && auxiliar->acao != (ACAO) NULL){
+                        auxiliar->acao(auxiliar->dados);
                         break;
                     }
 
@@ -221,7 +224,6 @@ LRESULT WINAPI WinProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp){
 
             do{
                 if(auxiliar->tipo == 0 && auxiliar->pintada == 0){
-
                     SetTextColor((HDC) wp, auxiliar->cor);
                     SetBkColor((HDC) wp, auxiliar->cor_de_fundo);
                     auxiliar->pintada = 1;
@@ -260,7 +262,8 @@ LRESULT WINAPI WinProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp){
             BeginPaint(hwnd, &ps);
 
             JANELA janela = procurar_janela(hwnd);
-
+            if(janela == (JANELA) -2)
+                break;
             HBRUSH brush = CreateSolidBrush(janela->cor_de_fundo);
             HPEN pen = CreatePen(PS_SOLID, 0, janela->cor_de_fundo);
 
@@ -275,9 +278,9 @@ LRESULT WINAPI WinProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp){
         }
             break;
         default:
-            DefWindowProcW(hwnd, msg, wp, lp);
+            return DefWindowProcW(hwnd, msg, wp, lp);
     }
-
+    return 0;
 }
 
 
@@ -318,10 +321,10 @@ LRESULT WINAPI WinProcNovo(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp){
         break;
 
         default:
-            CallWindowProcW(WinProcPadrao, hwnd, msg, wp, lp);
+            return CallWindowProcW(WinProcPadrao, hwnd, msg, wp, lp);
             break;
     }
-
+    return 0;
 }
 
 
@@ -428,7 +431,7 @@ void _sair(){
 
 
 
-JANELA _criar_janela(int tipo, wchar_t *texto, int x, int y, int largura, int altura, int comando, COLORREF cor, COLORREF cor_de_fundo, JANELA pai, unsigned long int opcoes){
+JANELA _criar_janela(int tipo, wchar_t *texto, int x, int y, int largura, int altura, ACAO acao, void *dados, COLORREF cor, COLORREF cor_de_fundo, JANELA pai, unsigned long int opcoes){
 
     if(tipo >= 0 && tipo <= 4){
         JANELA nova = malloc(sizeof(struct janela));
@@ -479,7 +482,7 @@ JANELA _criar_janela(int tipo, wchar_t *texto, int x, int y, int largura, int al
 
             }while(auxiliar != lista_janelas);
         }
-
+        int comando = buscar_comando();
         nova->hWnd = CreateWindowW(tipo_janela, texto, estilo, x, y, largura, altura, hWnd_final, (HMENU) comando, NULL, NULL);
         if(tipo == JANELA_TEXTO){
             WinProcPadrao = (WNDPROC) SetWindowLongW(nova->hWnd, GWLP_WNDPROC, (LONG_PTR) WinProcNovo);
@@ -491,6 +494,8 @@ JANELA _criar_janela(int tipo, wchar_t *texto, int x, int y, int largura, int al
         nova->largura = largura;
         nova->altura = altura;
         nova->comando = comando;
+        nova->acao = acao;
+        nova->dados = dados;
         nova->cor = cor;
         nova->cor_de_fundo = cor_de_fundo;
         nova->pintada = 0;
@@ -618,6 +623,23 @@ int _modificar_janela_xy(JANELA janela, int x, int y){
 
     return 0;
 
+}
+
+
+
+
+//Função interna que modifica o texto de uma janela
+int _modificar_texto_janela(JANELA janela, wchar_t *texto){
+    JANELA auxiliar = lista_janelas;
+    do{
+        if(auxiliar == janela){
+            wcscpy(janela->texto, texto);
+            SetWindowTextW(janela->hWnd, texto);
+            break;
+        }
+        auxiliar = auxiliar->prox;
+    }while(auxiliar != lista_janelas);
+    return 0;
 }
 
 
@@ -788,13 +810,9 @@ int _caixa_dialogo(wchar_t *titulo, wchar_t *texto, unsigned int opcoes, JANELA 
 
 
 int _destruir_janela(JANELA janela){
-
     if(janela){
-
         JANELA auxiliar = lista_janelas;
-
         if(lista_janelas){
-
             if(lista_janelas->ant == lista_janelas){
                 if(janela == lista_janelas){
                     DestroyWindow(janela->hWnd);
@@ -802,32 +820,22 @@ int _destruir_janela(JANELA janela){
                     lista_janelas = NULL;
                 }
             }else{
-
                 do{
                     if(auxiliar == janela){
-
                         DestroyWindow(auxiliar->hWnd);
-
                         JANELA excluir = auxiliar;
-
                         auxiliar->ant->prox = auxiliar->prox;
                         auxiliar->prox->ant = auxiliar->ant;
-
                         if(auxiliar == lista_janelas)
                             lista_janelas = lista_janelas->prox;
                         break;
                         free(excluir);
                     }
-
                     auxiliar = auxiliar->prox;
-
                 }while(auxiliar != lista_janelas);
             }
-
         }
-
     }
-
     return 0;
 }
 
@@ -853,4 +861,26 @@ static JANELA procurar_janela(HWND hwnd){
 
     return (JANELA) -2;
 
+}
+
+
+
+
+//Função que procura um número para comando disponível
+static int buscar_comando(){
+
+    JANELA auxiliar = lista_janelas;
+
+    int maior = -1;
+
+    if(auxiliar){
+        do{
+            if(auxiliar->tipo == JANELA_BOTAO && auxiliar->comando > maior)
+                maior = auxiliar->comando;
+
+            auxiliar = auxiliar->prox;
+        }while(auxiliar != lista_janelas);
+    }
+
+    return maior + 1;
 }
